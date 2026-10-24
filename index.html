@@ -1,0 +1,441 @@
+
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Catch the Stars ⭐</title>
+
+<style>
+
+* { box-sizing: border-box; }
+
+body {
+
+  margin: 0;
+
+  min-height: 100vh;
+
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  font-family: Arial, sans-serif;
+
+  background: linear-gradient(135deg, #ffe5f0, #e5ddff);
+
+  color: #634c80;
+
+}
+
+.game {
+
+  width: 92%;
+
+  max-width: 420px;
+
+  padding: 22px;
+
+  text-align: center;
+
+  border-radius: 28px;
+
+  background: #ffffffd9;
+
+  box-shadow: 0 10px 35px #8b72a633;
+
+}
+
+h1 { margin: 5px 0; }
+
+.stats {
+
+  display: flex;
+
+  justify-content: space-around;
+
+  margin: 18px 0;
+
+  font-weight: bold;
+
+}
+
+canvas {
+
+  display: block;
+
+  width: 100%;
+
+  border: 3px solid white;
+
+  border-radius: 20px;
+
+  background: linear-gradient(#b8b5ef, #f9d9ec);
+
+  touch-action: none;
+
+}
+
+button {
+
+  border: none;
+
+  padding: 12px 20px;
+
+  margin: 6px;
+
+  border-radius: 14px;
+
+  background: #a184d8;
+
+  color: white;
+
+  font-size: 17px;
+
+  cursor: pointer;
+
+  transition: transform .15s;
+
+}
+
+button:hover { transform: scale(1.06); }
+
+button:active { transform: scale(.94); }
+
+</style>
+
+</head>
+
+<body>
+
+<div class="game">
+
+  <h1>⭐ Catch the Stars</h1>
+
+  <p>Catch stars. Avoid bombs!</p>
+
+  <div class="stats">
+
+    <span>Score: <span id="score">0</span></span>
+
+    <span>Lives: <span id="lives">3</span> ❤️</span>
+
+  </div>
+
+  <canvas id="game" width="320" height="390"></canvas>
+
+  <div>
+
+    <button id="left">⬅️</button>
+
+    <button id="start">▶ Start</button>
+
+    <button id="right">➡️</button>
+
+  </div>
+
+  <p>⭐ +1 point | 💣 Lose one life</p>
+
+  <p id="message">Ready? Let's play! ✨</p>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("game");
+
+const ctx = canvas.getContext("2d");
+
+const scoreText = document.getElementById("score");
+
+const livesText = document.getElementById("lives");
+
+const message = document.getElementById("message");
+
+let score = 0;
+
+let lives = 3;
+
+let playing = false;
+
+let player = { x: 140, y: 345, w: 40 };
+
+let items = [];
+
+let timer = 0;
+
+let lastTime = 0;
+
+let animation;
+
+function draw() {
+
+  ctx.clearRect(0, 0, 320, 390);
+
+  // Background sparkles
+
+  for (let i = 0; i < 22; i++) {
+
+    ctx.fillStyle = "#ffffff99";
+
+    ctx.beginPath();
+
+    ctx.arc((i * 47) % 320, (i * 73) % 390, 2, 0, Math.PI * 2);
+
+    ctx.fill();
+
+  }
+
+  // Falling stars and bombs
+
+  ctx.font = "25px Arial";
+
+  ctx.textAlign = "center";
+
+  items.forEach(item => {
+
+    ctx.fillText(item.bomb ? "💣" : "⭐", item.x, item.y);
+
+  });
+
+  // Player's basket
+
+  ctx.font = "34px Arial";
+
+  ctx.fillText("🧺", player.x + player.w / 2, player.y + 10);
+
+}
+
+function updateStats() {
+
+  scoreText.textContent = score;
+
+  livesText.textContent = lives;
+
+}
+
+function finish() {
+
+  playing = false;
+
+  cancelAnimationFrame(animation);
+
+  message.textContent = "Game over! ⭐ Final score: " + score;
+
+  document.getElementById("start").textContent = "↻ Restart";
+
+  draw();
+
+}
+
+function loop(time) {
+
+  if (!playing) return;
+
+  const dt = lastTime ? Math.min((time - lastTime) / 16.67, 2) : 1;
+
+  lastTime = time;
+
+  timer += dt;
+
+  if (timer > Math.max(18, 42 - score * 0.3)) {
+
+    timer = 0;
+
+    items.push({
+
+      x: 15 + Math.random() * 290,
+
+      y: -10,
+
+      speed: 2 + Math.random() * 1.5 + score * 0.02,
+
+      bomb: Math.random() < 0.2
+
+    });
+
+  }
+
+  items.forEach(item => {
+
+    item.y += item.speed * dt;
+
+    if (
+
+      item.y >= player.y - 10 &&
+
+      item.y <= player.y + 18 &&
+
+      Math.abs(item.x - (player.x + player.w / 2)) < 27
+
+    ) {
+
+      if (item.bomb) {
+
+        lives--;
+
+      } else {
+
+        score++;
+
+      }
+
+      item.caught = true;
+
+      updateStats();
+
+      if (lives <= 0) {
+
+        finish();
+
+      }
+
+    }
+
+  });
+
+  items = items.filter(item =>
+
+    !item.caught && item.y < 410
+
+  );
+
+  draw();
+
+  if (playing) {
+
+    animation = requestAnimationFrame(loop);
+
+  }
+
+}
+
+function startGame() {
+
+  cancelAnimationFrame(animation);
+
+  score = 0;
+
+  lives = 3;
+
+  timer = 0;
+
+  lastTime = 0;
+
+  items = [];
+
+  player.x = 140;
+
+  playing = true;
+
+  updateStats();
+
+  message.textContent = "Catch as many stars as you can! ✨";
+
+  document.getElementById("start").textContent = "↻ Restart";
+
+  draw();
+
+  animation = requestAnimationFrame(loop);
+
+}
+
+function move(amount) {
+
+  player.x = Math.max(
+
+    0,
+
+    Math.min(280, player.x + amount)
+
+  );
+
+  draw();
+
+}
+
+document.getElementById("start")
+
+  .addEventListener("click", startGame);
+
+document.getElementById("left")
+
+  .addEventListener("click", () => move(-25));
+
+document.getElementById("right")
+
+  .addEventListener("click", () => move(25));
+
+// Keyboard controls
+
+document.addEventListener("keydown", event => {
+
+  if (!playing) return;
+
+  if (event.key === "ArrowLeft") move(-20);
+
+  if (event.key === "ArrowRight") move(20);
+
+});
+
+// Touch and mouse controls
+
+function moveToPointer(event) {
+
+  if (!playing) return;
+
+  const rect = canvas.getBoundingClientRect();
+
+  player.x = Math.max(
+
+    0,
+
+    Math.min(
+
+      280,
+
+      (event.clientX - rect.left) *
+
+      320 / rect.width - 20
+
+    )
+
+  );
+
+  draw();
+
+}
+
+canvas.addEventListener("pointerdown", event => {
+
+  canvas.setPointerCapture(event.pointerId);
+
+  moveToPointer(event);
+
+});
+
+canvas.addEventListener("pointermove", event => {
+
+  if (event.buttons || event.pointerType === "touch") {
+
+    moveToPointer(event);
+
+  }
+
+});
+
+draw();
+
+</script>
+
+</body>
+
+</html>
